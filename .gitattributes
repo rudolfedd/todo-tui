@@ -1,0 +1,10 @@
+# Keep the line endings as LF everywhere, so the shell script stays
+# executable under bash and the sources behave the same on every platform.
+* text=auto eol=lf
+
+*.sh  text eol=lf
+Makefile text eol=lf
+*.c   text
+*.h   text
+*.md  text
+*.yml text
