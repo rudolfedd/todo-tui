@@ -9,7 +9,15 @@ CC      ?= cc
 CFLAGS  ?= -std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion
 CPPFLAGS += -D_XOPEN_SOURCE=700
 LDFLAGS ?=
-LDLIBS  += -lncurses
+
+# Some distributions ship only the wide character build (libncursesw).
+CURSES_LIB := $(shell for l in ncursesw ncurses; do \
+                 if printf 'int main(void){return 0;}' | $(CC) -x c - -l$$l -o /dev/null >/dev/null 2>&1; \
+                 then echo "-l$$l"; break; fi; \
+               done)
+CURSES_LIB := $(if $(CURSES_LIB),$(CURSES_LIB),-lncurses)
+
+LDLIBS  += $(CURSES_LIB)
 
 PREFIX  ?= /usr/local
 BINDIR  ?= $(PREFIX)/bin
