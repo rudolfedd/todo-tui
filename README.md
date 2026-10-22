@@ -1,241 +1,129 @@
-# todo-tui
+# ┌─ todo-tui /
 
-A fast, keyboard-driven todo list for the terminal. Written in C, no runtime
-dependencies beyond ncurses (Linux/macOS) or PDCurses (Windows).
+## ├─ What is it
+      Fast, keyboard-driven todo list for the terminal.
+      Written in C: ncurses on Linux/macOS, PDCurses on Windows.
 
-```
- todo-tui   3/8 done  view:active  sort:newest  find:milk
-──────────────────────────────────────────────────────────────────────────
- > [ ] Buy milk                              #home #errands  HIGH  2026-10-24
-   [x] Renew the domain                       #work          MED   2026-10-10
-   [ ] Write the release notes                #work          LOW   2026-10-30
-   [ ] Call the dentist                                     LOW   overdue 2026-10-19
-──────────────────────────────────────────────────────────────────────────
- 2/8  ####----   shown 4                          #2/4
- j/k move  space done  a add  e edit  d del  p prio  / find  f filter  …
-```
+## ├─ Features
+      ✅ Add, edit, complete and delete tasks with confirmation
+      🔎 Incremental search over titles, notes, tags and due dates
+      🏷️ Tags, priorities (low / med / high) and due dates, overdue in red
+      🎚️ Filters — all, active, done, today, overdue, by tag
+      ↕️ Sorting — newest, priority, due date, alphabetically
+      💾 JSON storage — human readable, atomic writes, portable
+      ↩️ Undo / redo, up to 120 steps
+      📊 Live progress bar and per-task counters
+      ❓ Context sensitive help (`?`), inline editing with a real cursor
+      📦 Single binary, no runtime dependencies, ASan/UBSan clean
 
-## Features
+## ├─ How build
+ 1. install `gcc`, `make` and ncurses — `libncurses-dev` (Debian/Ubuntu),
+    `ncurses-devel` (Fedora), `brew install ncurses` (macOS)
+ 2. `git clone https://github.com/rudolfedd/todo-tui.git && cd todo-tui`
+ 3. `make` — build `./todo-tui`
+ 4. `make test` — run the unit tests
+ 5. `sudo make install` — install into `$PREFIX/bin`
+ 6. `make DEBUG=1` — build with AddressSanitizer + UndefinedBehaviorSanitizer
 
-- **CRUD** — add, edit, complete, delete, with a confirmation dialog
-- **Filters** — all / active / done / today / overdue / by tag
-- **Sorting** — newest, priority, due date, alphabetically (stable sort)
-- **Incremental search** over titles, notes, tags and due dates
-- **Tags, priorities and due dates** (overdue items are highlighted in red)
-- **JSON storage** — human readable, atomic writes, portable between platforms
-- **Undo / redo** — snapshot based, up to 120 steps
-- **Live progress bar** and per-task counters in the status bar
-- **Context sensitive help** (`?`), inline editing with a real cursor
-- **Single binary**, zero runtime deps, C11, no memory leaks (ASan/UBSan clean)
+      Windows — MSYS2 (MINGW64) shell:
+      `pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-pdcurses make`
+      `./build-msys2.sh` — builds `todo-tui.exe` (needs `libpdcurses.dll`)
 
-## Install
+## ├─ How run
+      todo-tui [options]
 
-### Linux / macOS
+      -c, --config PATH   database file
+      -h, --help          show help
+      -v, --version       show version
 
-```sh
-sudo apt install libncurses-dev make gcc   # Debian/Ubuntu
-# Fedora: sudo dnf install ncurses-devel
-# macOS:  brew install ncurses && brew link ncurses
-```
+      Linux   — $XDG_CONFIG_HOME/todo-tui/todos.json  (~/.config/todo-tui/todos.json)
+      Windows — %APPDATA%\todo-tui\todos.json
+      Override with `--config PATH` or `TODO_TUI_CONFIG`.
 
-```sh
-git clone https://github.com/<you>/todo-tui.git
-cd todo-tui
-make
-./todo-tui
-```
+## ├─ Keys
+      j  ↓         — move down
+      k  ↑         — move up
+      g  Home      — first task
+      G  End       — last task
+      ^D  PgDn     — half page down
+      ^U  PgUp     — half page up
+      Space  Enter — toggle done
+      a            — add task
+      e            — edit task
+      d            — delete task (asks first)
+      p            — cycle priority low → med → high
+      X            — remove all completed tasks (asks first)
+      /            — incremental search
+      f            — change filter
+      s            — change sort order
+      t            — filter by tag
+      Esc          — clear the search / tag filter
+      u            — undo
+      ^R           — redo
+      ?            — toggle the help screen
+      q  ^C        — quit
 
-`make install` copies the binary to `$PREFIX/bin` (default `/usr/local`).
+      While editing: ^W delete word, ^U clear line, ^A / ^E jump to start / end,
+      Tab moves between form fields.
 
-### Windows
+## ├─ Data format
+      One JSON file, safe to edit by hand and to keep in version control.
+      Writes are atomic: the new content goes to `todos.json.tmp` and is then
+      renamed over the original, so an interrupted save never corrupts the file.
 
-The easiest route is [MSYS2](https://www.msys2.org/) (it provides both the
-compiler and PDCurses):
+      {
+        "version": 1,
+        "next_id": 3,
+        "tasks": [
+          {
+            "id": 1,
+            "title": "Buy milk",
+            "notes": "2.5%, two bottles",
+            "done": false,
+            "priority": "high",
+            "created": 1761000000,
+            "completed": 0,
+            "tags": ["home", "errands"],
+            "due": "2026-10-24"
+          }
+        ]
+      }
 
-```sh
-# In an MSYS2 "MSYS2 UCRT64" or "MINGW64" shell
-pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-pdcurses make
-./build-msys2.sh
-./todo-tui.exe
-```
+## ├─ Project structure
+      todo-tui/
+      ├── src/
+      │   ├── main.c            — entry point, argument parsing, signals
+      │   ├── app.c/.h          — app state: filters, sorting, undo/redo, actions
+      │   ├── ui.c/.h           — curses rendering and key handling
+      │   ├── model.c/.h        — the Task data model
+      │   ├── store.c/.h        — locating, loading and saving the JSON database
+      │   ├── json.c/.h         — dependency-free JSON parser and writer
+      │   ├── editor.c/.h       — UTF-8 aware single line editor
+      │   ├── util.c/.h         — allocation helpers, buffers, string/UTF-8 utils
+      │   └── curses_compat.h   — picks ncurses or PDCurses
+      ├── tests/
+      │   ├── test_json.c       — JSON parser and helper tests
+      │   └── test_store.c      — storage tests
+      ├── Makefile
+      ├── CMakeLists.txt
+      ├── build-msys2.sh
+      ├── LICENSE
+      └── README.md
 
-The script compiles everything into `todo-tui.exe`; the only runtime dependency
-is `libpdcurses.dll`, which you can copy next to the executable or put on
-`PATH`.
+## ├─ Русский
+      Терминальный todo-лист на C: ncurses на Linux/macOS, PDCurses на Windows.
 
-### Build options
+      `make && ./todo-tui` — Linux.
+      `pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-pdcurses make`
+      и `./build-msys2.sh` — Windows, MSYS2 shell (MINGW64).
 
-```sh
-make DEBUG=1     # -O0 -g with AddressSanitizer + UndefinedBehaviorSanitizer
-make test        # run the unit tests
-make clean
-```
+      j k ↑ ↓ — навигация, g G — первая / последняя задача, Space — отметить
+      выполненной, a e d — добавить / изменить / удалить, p — приоритет,
+      / f s t — поиск / фильтр / сортировка / теги, u ^R — undo / redo,
+      X — убрать выполненные, ? — справка, q — выход.
 
-## Usage
+      База — обычный JSON: $XDG_CONFIG_HOME/todo-tui/todos.json на Linux,
+      %APPDATA%\todo-tui\todos.json на Windows. Переопределяется `--config PATH`
+      или переменной `TODO_TUI_CONFIG`.
 
-```
-todo-tui [options]
-
-  -c, --config PATH   use PATH as the database file
-  -h, --help          show help
-  -v, --version       show the version
-```
-
-The database location defaults to:
-
-| Platform | Path |
-|---|---|
-| Linux | `$XDG_CONFIG_HOME/todo-tui/todos.json` (`~/.config/todo-tui/todos.json`) |
-| Windows | `%APPDATA%\todo-tui\todos.json` |
-
-Override it with `--config` or the `TODO_TUI_CONFIG` environment variable.
-
-## Key bindings
-
-### Navigation
-
-| Key | Action |
-|---|---|
-| `j` / `↓` | move down |
-| `k` / `↑` | move up |
-| `g` / `Home` | first task |
-| `G` / `End` | last task |
-| `Ctrl-D` / `PgDn` | half page down |
-| `Ctrl-U` / `PgUp` | half page up |
-
-### Tasks
-
-| Key | Action |
-|---|---|
-| `Space` / `Enter` | toggle done |
-| `a` | add task |
-| `e` | edit task |
-| `d` | delete task (asks first) |
-| `p` | cycle priority (low → med → high) |
-| `X` | remove all completed tasks (asks first) |
-
-### Find and view
-
-| Key | Action |
-|---|---|
-| `/` | incremental search |
-| `f` | change filter |
-| `s` | change sort order |
-| `t` | filter by tag |
-| `Esc` | clear the search / tag filter |
-
-### Other
-
-| Key | Action |
-|---|---|
-| `u` | undo |
-| `Ctrl-R` | redo |
-| `?` | toggle the help screen |
-| `q` / `Ctrl-C` | quit |
-
-While editing text: `Ctrl-W` deletes a word, `Ctrl-U` clears the line,
-`Ctrl-A`/`Ctrl-E` jump to the start/end, `Tab` moves between form fields.
-
-## Data format
-
-The database is a single JSON file that is safe to edit by hand and to keep in
-version control:
-
-```json
-{
-  "version": 1,
-  "next_id": 3,
-  "tasks": [
-    {
-      "id": 1,
-      "title": "Buy milk",
-      "notes": "2.5%, two bottles",
-      "done": false,
-      "priority": "high",
-      "created": 1761000000,
-      "completed": 0,
-      "tags": ["home", "errands"],
-      "due": "2026-10-24"
-    }
-  ]
-}
-```
-
-Writes are atomic: the new content is written to `todos.json.tmp` and then
-renamed over the original, so an interrupted save never corrupts the file.
-
-## Project layout
-
-```
-src/
-  main.c            entry point, argument parsing, signal handling
-  app.c/.h          application state: filters, sorting, undo/redo, actions
-  ui.c/.h           curses rendering and key handling
-  model.c/.h        the Task data model
-  store.c/.h        locating, loading and saving the JSON database
-  json.c/.h         a small dependency-free JSON parser and writer
-  editor.c/.h       a UTF-8 aware single line editor
-  util.c/.h         allocation helpers, dynamic buffers, string/UTF-8 utilities
-  curses_compat.h   picks ncurses or PDCurses
-tests/
-  test_json.c       unit tests for the JSON parser and the helpers
-```
-
-The code is deliberately split so that the business logic (`app.c`, `model.c`,
-`store.c`) has no dependency on curses — that keeps it testable and portable.
-
-## Tests
-
-```sh
-make test
-```
-
-The suite covers the JSON parser (including escapes, surrogate pairs and
-malformed input), the UTF-8 helpers and the list splitting logic.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
-
----
-
-## Русский
-
-Терминальный todo-лист на C: ncurses на Linux/macOS, PDCurses на Windows.
-
-**Установка**
-
-```sh
-# Linux
-sudo apt install libncurses-dev make gcc
-make && ./todo-tui
-
-# Windows (MSYS2, MINGW64 shell)
-pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-pdcurses make
-./build-msys2.sh && ./todo-tui.exe
-```
-
-**Горячие клавиши**
-
-| Клавиши | Действие |
-|---|---|
-| `j` `k` `↑` `↓` | навигация по списку |
-| `g` `G` | первая / последняя задача |
-| `Space` | отметить выполненной |
-| `a` `e` `d` | добавить / изменить / удалить |
-| `p` | сменить приоритет |
-| `/` `f` `s` `t` | поиск / фильтр / сортировка / теги |
-| `u` `Ctrl-R` | undo / redo |
-| `X` | убрать выполненные |
-| `?` | справка |
-| `q` | выход |
-
-**Где хранится база**
-
-| Платформа | Путь |
-|---|---|
-| Linux | `$XDG_CONFIG_HOME/todo-tui/todos.json` |
-| Windows | `%APPDATA%\todo-tui\todos.json` |
-
-Переопределяется флагом `--config PATH` или переменной `TODO_TUI_CONFIG`.
-Файл в обычном JSON — его можно править руками и держать в git.
+## └─ Author = rudolfedd

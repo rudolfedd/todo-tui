@@ -33,7 +33,7 @@ endif
 
 .PHONY: all clean install uninstall test
 
-all: $(BIN)
+all: $(BIN) tests/test_json tests/test_store
 
 $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
@@ -60,7 +60,7 @@ tests/test_json: tests/test_json.c src/json.c src/util.c
 tests/test_store: tests/test_store.c src/json.c src/util.c src/model.c src/store.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ $^
 
-install: $(BIN)
+install: $(BIN) tests/test_json tests/test_store
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp $(BIN) $(DESTDIR)$(BINDIR)/$(BIN)
 
